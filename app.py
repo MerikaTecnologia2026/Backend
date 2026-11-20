@@ -7,7 +7,7 @@ from config import Config
 from extensions import db, migrate, jwt
 
 from exceptions.handlers import register_error_handlers
-from routes.assistente_voz import assistente_voz_bp
+#from routes.assistente_voz import assistente_voz_bp
 
 
 
@@ -126,11 +126,10 @@ app.register_blueprint(
     taxa_pagamento_bp,
     url_prefix="/taxa-pagamento"
 )
-app.register_blueprint(
-    assistente_voz_bp,
-    url_prefix="/assistente-voz"
-)
-
+# app.register_blueprint(
+#     assistente_voz_bp,
+#     url_prefix="/assistente-voz"
+# )
 
 
 
