@@ -2,7 +2,11 @@
 import logging
 
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    jwt_required,
+    get_jwt_identity,
+    create_access_token
+)
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from extensions import db
@@ -93,6 +97,11 @@ def register():
         usuario = obter_usuario()
         dados = request.get_json(silent=True)
 
+        if not usuario.ativo:
+            return jsonify({
+                "erro": "Usuário desativado."
+            }), 403
+
         if not isinstance(dados, dict):
             raise BadRequest("Envie um JSON válido.")
 
@@ -101,9 +110,19 @@ def register():
             usuario.id
         )
 
+        # Gerar novo token com a empresa vinculada
+        novo_token = create_access_token(
+            identity=str(usuario.id),
+            additional_claims={
+                "empresa_id": empresa.id,
+                "tipo": usuario.tipo
+            }
+        )
+
         return jsonify({
             "mensagem": "Empresa cadastrada com sucesso.",
-            "id": empresa.id
+            "id": empresa.id,
+            "access_token": novo_token
         }), 201
 
     except Exception as erro:
