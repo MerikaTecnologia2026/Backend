@@ -9,7 +9,7 @@ class AssistenteVozService:
     def obter_modelo(cls):
         if cls._modelo is None:
             cls._modelo = WhisperModel(
-                "base",
+                "tiny",
                 device="cpu",
                 compute_type="int8"
             )
@@ -23,7 +23,7 @@ class AssistenteVozService:
         segmentos, informacoes = modelo.transcribe(
             caminho_audio,
             language="pt",
-            beam_size=5,
+            beam_size=1,
             vad_filter=True
         )
 
