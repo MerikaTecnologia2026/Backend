@@ -119,7 +119,7 @@ class CategoriaService:
         ).first()
 
         if existente:
-            raise BadRequest("Categoria já cadastrada para esse tipo.")
+             return existente
 
         # Não permitir mudar o tipo quando há registros vinculados.
         if tipo != categoria.tipo:
