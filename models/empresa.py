@@ -29,7 +29,7 @@ class Empresa(db.Model):
 
     slogan = db.Column(db.String(255))
 
-    logo = db.Column(db.String(255))
+    logo = db.Column(db.LargeBinary, nullable=True)
 
     ativo = db.Column(db.Boolean, default=True)
 
