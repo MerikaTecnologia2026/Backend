@@ -1,12 +1,13 @@
 
 import logging
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
 from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity,
     create_access_token
 )
+from models.empresa import Empresa
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from extensions import db
@@ -55,7 +56,7 @@ def resposta_empresa(empresa):
         "site": empresa.site,
         "instagram": empresa.instagram,
         "slogan": empresa.slogan,
-        "logo": empresa.logo,
+        "logo": f"/empresa/logo" if empresa.logo else None,
     }
 
 
@@ -178,6 +179,72 @@ def deletar():
         return jsonify({
             "mensagem": "Empresa excluída com sucesso."
         }), 200
+
+    except Exception as erro:
+        return tratar_erro(erro)
+
+@empresa_bp.route("/logo", methods=["POST"])
+@jwt_required()
+def salvar_logo():
+    try:
+        empresa_id = obter_empresa_id()
+
+        imagem = request.files.get("logo")
+
+        if not imagem:
+            raise BadRequest("Selecione uma imagem.")
+
+        if imagem.mimetype not in ("image/png", "image/jpeg", "image/webp"):
+            raise BadRequest("Formato inválido. Use PNG, JPG ou WEBP.")
+
+        conteudo = imagem.read(2 * 1024 * 1024 + 1)
+
+        if len(conteudo) > 2 * 1024 * 1024:
+            raise BadRequest("A imagem deve ter no máximo 2 MB.")
+
+        if not conteudo:
+            raise BadRequest("A imagem está vazia.")
+
+        empresa = db.session.get(Empresa, empresa_id)
+
+        if not empresa:
+            raise NotFound("Empresa não encontrada.")
+
+        empresa.logo = conteudo
+
+        db.session.commit()
+
+        return jsonify({
+            "mensagem": "Logomarca salva com sucesso."
+        }), 200
+
+    except Exception as erro:
+        return tratar_erro(erro)
+
+
+@empresa_bp.route("/logo", methods=["GET"])
+@jwt_required()
+def visualizar_logo():
+    try:
+        empresa_id = obter_empresa_id()
+
+        empresa = db.session.get(Empresa, empresa_id)
+
+        if not empresa or not empresa.logo:
+            raise NotFound("Logomarca não encontrada.")
+
+        imagem = bytes(empresa.logo)
+
+        if imagem.startswith(b"\x89PNG\r\n\x1a\n"):
+            tipo = "image/png"
+        elif imagem.startswith(b"\xff\xd8\xff"):
+            tipo = "image/jpeg"
+        elif imagem.startswith(b"RIFF") and imagem[8:12] == b"WEBP":
+            tipo = "image/webp"
+        else:
+            raise BadRequest("Formato da imagem armazenada inválido.")
+
+        return Response(imagem, mimetype=tipo)
 
     except Exception as erro:
         return tratar_erro(erro)
