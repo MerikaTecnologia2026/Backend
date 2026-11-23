@@ -1,6 +1,3 @@
-from faster_whisper import WhisperModel
-
-
 class AssistenteVozService:
 
     _modelo = None
@@ -8,6 +5,8 @@ class AssistenteVozService:
     @classmethod
     def obter_modelo(cls):
         if cls._modelo is None:
+            from faster_whisper import WhisperModel
+
             cls._modelo = WhisperModel(
                 "tiny",
                 device="cpu",
