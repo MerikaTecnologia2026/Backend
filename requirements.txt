@@ -6,6 +6,7 @@ Flask-Migrate
 psycopg2-binary
 python-dotenv
 gunicorn
-faster-whisper
+faster-whisper==1.2.1
+av==18.1.0
 email-validator
 psycopg[binary]
