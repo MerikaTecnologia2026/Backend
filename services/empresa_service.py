@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 
 from exceptions.api_exception import BadRequest, NotFound
 from models.empresa import Empresa
