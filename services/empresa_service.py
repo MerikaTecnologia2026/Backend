@@ -4,6 +4,7 @@ from exceptions.api_exception import BadRequest, NotFound
 from models.empresa import Empresa
 from extensions import db
 from models.usuario import Usuario
+from services.categoria_service import CategoriaService
 
 
 class EmpresaService:
@@ -63,9 +64,14 @@ class EmpresaService:
 
             usuario.empresa_id = empresa.id
 
+            CategoriaService.criar_categorias_padrao(
+                empresa.id
+            )
+
             db.session.commit()
 
             return empresa
+
         except Exception:
             db.session.rollback()
             raise

@@ -138,6 +138,33 @@ class CategoriaService:
         except Exception:
             db.session.rollback()
             raise
+    CATEGORIAS_PADRAO = (
+    ("Venda", "VENDA"),
+    ("Serviço", "SERVICO"),
+)
+
+@staticmethod
+def criar_categorias_padrao(empresa_id):
+    if not empresa_id:
+        raise BadRequest("Empresa não identificada.")
+
+    for nome, tipo in CategoriaService.CATEGORIAS_PADRAO:
+
+        existente = Categoria.query.filter(
+            Categoria.empresa_id == empresa_id,
+            db.func.lower(Categoria.nome) == nome.lower(),
+            Categoria.tipo == tipo,
+            Categoria.deletado_em.is_(None)
+        ).first()
+
+        if not existente:
+            categoria = Categoria(
+                empresa_id=empresa_id,
+                nome=nome,
+                tipo=tipo
+            )
+
+            db.session.add(categoria)
 
     @staticmethod
     def deletar(categoria_id, empresa_id):
@@ -168,3 +195,4 @@ class CategoriaService:
         except Exception:
             db.session.rollback()
             raise
+        
