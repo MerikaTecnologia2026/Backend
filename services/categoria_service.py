@@ -11,7 +11,7 @@ class CategoriaService:
         "PRODUTO",
         "SERVICO",
         "VENDA",
-        "DESPESA"
+        "DESPESA",
     )
 
     # ========================================
@@ -24,13 +24,26 @@ class CategoriaService:
         ("Produto", "PRODUTO"),
     )
 
-    # Categorias de despesas serão definidas posteriormente.
     CATEGORIAS_PADRAO_DESPESA = ()
 
     CATEGORIAS_PADRAO = (
         CATEGORIAS_PADRAO_RECEITA
         + CATEGORIAS_PADRAO_DESPESA
     )
+
+    # ========================================
+    # BUSCAR CATEGORIA PELO NOME E TIPO
+    # ========================================
+
+    @staticmethod
+    def buscar_por_nome(nome, tipo, empresa_id):
+
+        return Categoria.query.filter(
+            Categoria.empresa_id == empresa_id,
+            db.func.lower(Categoria.nome) == nome.lower(),
+            Categoria.tipo == tipo,
+            Categoria.deletado_em.is_(None)
+        ).first()
 
     # ========================================
     # CRIAR CATEGORIAS PADRÃO
@@ -44,12 +57,11 @@ class CategoriaService:
 
         for nome, tipo in CategoriaService.CATEGORIAS_PADRAO:
 
-            existente = Categoria.query.filter(
-                Categoria.empresa_id == empresa_id,
-                db.func.lower(Categoria.nome) == nome.lower(),
-                Categoria.tipo == tipo,
-                Categoria.deletado_em.is_(None)
-            ).first()
+            existente = CategoriaService.buscar_por_nome(
+                nome,
+                tipo,
+                empresa_id
+            )
 
             if not existente:
 
@@ -115,28 +127,52 @@ class CategoriaService:
         return nome, tipo
 
     # ========================================
-    # REGISTRAR CATEGORIA
+    # OBTER OU CRIAR CATEGORIA
     # ========================================
 
     @staticmethod
-    def registrar(dados, empresa_id):
+    def obter_ou_criar(dados, empresa_id):
 
         if not empresa_id:
             raise BadRequest("Empresa não identificada.")
 
         nome, tipo = CategoriaService.validar_dados(dados)
 
-        existente = Categoria.query.filter(
-            Categoria.empresa_id == empresa_id,
-            db.func.lower(Categoria.nome) == nome.lower(),
-            Categoria.tipo == tipo,
-            Categoria.deletado_em.is_(None)
-        ).first()
+        # Permitir somente as categorias padrão
+        # para os tipos de receitas.
+
+        if tipo != "DESPESA":
+
+            categorias_permitidas = {
+                tipo_padrao: nome_padrao
+                for nome_padrao, tipo_padrao
+                in CategoriaService.CATEGORIAS_PADRAO_RECEITA
+            }
+
+            nome_padrao = categorias_permitidas.get(tipo)
+
+            if (
+                not nome_padrao
+                or nome.lower() != nome_padrao.lower()
+            ):
+                raise BadRequest(
+                    "Categoria de receita não permitida."
+                )
+
+            nome = nome_padrao
+
+        # Verificar se a categoria já existe.
+
+        existente = CategoriaService.buscar_por_nome(
+            nome,
+            tipo,
+            empresa_id
+        )
 
         if existente:
-            raise BadRequest(
-                "Categoria já cadastrada para esse tipo."
-            )
+            return existente, False
+
+        # Caso não exista, cadastrar.
 
         categoria = Categoria(
             empresa_id=empresa_id,
@@ -145,14 +181,30 @@ class CategoriaService:
         )
 
         try:
+
             db.session.add(categoria)
             db.session.commit()
 
-            return categoria
+            return categoria, True
 
         except Exception:
+
             db.session.rollback()
             raise
+
+    # ========================================
+    # REGISTRAR CATEGORIA
+    # ========================================
+
+    @staticmethod
+    def registrar(dados, empresa_id):
+
+        categoria, _ = CategoriaService.obter_ou_criar(
+            dados,
+            empresa_id
+        )
+
+        return categoria
 
     # ========================================
     # LISTAR CATEGORIAS
@@ -231,6 +283,11 @@ class CategoriaService:
 
         nome, tipo = CategoriaService.validar_dados(dados)
 
+        if tipo != "DESPESA":
+            raise BadRequest(
+                "As categorias de receitas são fixas."
+            )
+
         existente = Categoria.query.filter(
             Categoria.id != categoria_id,
             Categoria.empresa_id == empresa_id,
@@ -243,9 +300,6 @@ class CategoriaService:
             raise BadRequest(
                 "Categoria já cadastrada para esse tipo."
             )
-
-        # Não permitir mudar o tipo quando existem
-        # registros vinculados à categoria.
 
         if tipo != categoria.tipo:
 
@@ -263,11 +317,13 @@ class CategoriaService:
         categoria.tipo = tipo
 
         try:
+
             db.session.commit()
 
             return categoria
 
         except Exception:
+
             db.session.rollback()
             raise
 
@@ -306,10 +362,12 @@ class CategoriaService:
         categoria.deletado_em = datetime.utcnow()
 
         try:
+
             db.session.commit()
 
             return True
 
         except Exception:
+
             db.session.rollback()
             raise

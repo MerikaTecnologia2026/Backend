@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
@@ -11,7 +10,12 @@ from exceptions.api_exception import NotFound
 categoria = Blueprint("categoria", __name__)
 
 
+# ========================================
+# IDENTIFICAR EMPRESA
+# ========================================
+
 def obter_empresa_id():
+
     usuario_id = get_jwt_identity()
 
     usuario = db.session.get(Usuario, usuario_id)
@@ -20,12 +24,19 @@ def obter_empresa_id():
         raise NotFound("Usuário não encontrado.")
 
     if not usuario.empresa_id:
-        raise NotFound("Usuário não possui empresa vinculada.")
+        raise NotFound(
+            "Usuário não possui empresa vinculada."
+        )
 
     return usuario.empresa_id
 
 
+# ========================================
+# SERIALIZAR CATEGORIA
+# ========================================
+
 def categoria_json(item):
+
     return {
         "id": item.id,
         "nome": item.nome,
@@ -33,29 +44,42 @@ def categoria_json(item):
     }
 
 
-# CADASTRAR CATEGORIA
+# ========================================
+# OBTER OU CADASTRAR CATEGORIA
+# ========================================
+
 @categoria.route("/register", methods=["POST"])
 @jwt_required()
 def register():
+
     dados = request.get_json(silent=True)
     empresa_id = obter_empresa_id()
 
-    nova_categoria = CategoriaService.registrar(
+    item, criada = CategoriaService.obter_ou_criar(
         dados,
         empresa_id
     )
 
     return jsonify({
-        "mensagem": "Categoria cadastrada com sucesso.",
-        "id": nova_categoria.id,
-        "categoria": categoria_json(nova_categoria)
-    }), 201
+        "mensagem": (
+            "Categoria cadastrada com sucesso."
+            if criada
+            else "Categoria já cadastrada."
+        ),
+        "criada": criada,
+        "id": item.id,
+        "categoria": categoria_json(item)
+    }), 201 if criada else 200
 
 
+# ========================================
 # LISTAR CATEGORIAS
+# ========================================
+
 @categoria.route("/", methods=["GET"])
 @jwt_required()
 def listar():
+
     empresa_id = obter_empresa_id()
 
     tipo = request.args.get("tipo")
@@ -71,10 +95,14 @@ def listar():
     ]), 200
 
 
-# BUSCAR CATEGORIA
+# ========================================
+# BUSCAR CATEGORIA POR ID
+# ========================================
+
 @categoria.route("/<int:id>", methods=["GET"])
 @jwt_required()
 def buscar_categoria(id):
+
     empresa_id = obter_empresa_id()
 
     item = CategoriaService.buscar_por_id(
@@ -82,13 +110,19 @@ def buscar_categoria(id):
         empresa_id
     )
 
-    return jsonify(categoria_json(item)), 200
+    return jsonify(
+        categoria_json(item)
+    ), 200
 
 
+# ========================================
 # ATUALIZAR CATEGORIA
+# ========================================
+
 @categoria.route("/<int:id>", methods=["PUT"])
 @jwt_required()
 def atualizar(id):
+
     dados = request.get_json(silent=True)
     empresa_id = obter_empresa_id()
 
@@ -104,10 +138,14 @@ def atualizar(id):
     }), 200
 
 
+# ========================================
 # EXCLUIR CATEGORIA
+# ========================================
+
 @categoria.route("/<int:id>", methods=["DELETE"])
 @jwt_required()
 def deletar(id):
+
     empresa_id = obter_empresa_id()
 
     CategoriaService.deletar(
