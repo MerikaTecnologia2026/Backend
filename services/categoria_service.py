@@ -24,7 +24,21 @@ class CategoriaService:
         ("Produto", "PRODUTO"),
     )
 
-    CATEGORIAS_PADRAO_DESPESA = ()
+    CATEGORIAS_PADRAO_DESPESA = (
+        ("Fornecedores", "DESPESA"),
+        ("Aluguel", "DESPESA"),
+        ("Energia elétrica", "DESPESA"),
+        ("Água", "DESPESA"),
+        ("Internet e telefone", "DESPESA"),
+        ("Transporte", "DESPESA"),
+        ("Marketing", "DESPESA"),
+        ("Impostos", "DESPESA"),
+        ("Salários", "DESPESA"),
+        ("Manutenção", "DESPESA"),
+        ("Alimentação", "DESPESA"),
+        ("Combustível", "DESPESA"),
+        ("Outras despesas", "DESPESA"),
+    )
 
     CATEGORIAS_PADRAO = (
         CATEGORIAS_PADRAO_RECEITA
@@ -215,6 +229,17 @@ class CategoriaService:
 
         if not empresa_id:
             raise BadRequest("Empresa não identificada.")
+
+        # Garante as categorias padrão (cria só as que faltam)
+        try:
+
+            CategoriaService.criar_categorias_padrao(empresa_id)
+            db.session.commit()
+
+        except Exception:
+
+            db.session.rollback()
+            raise
 
         consulta = Categoria.query.filter(
             Categoria.empresa_id == empresa_id,
